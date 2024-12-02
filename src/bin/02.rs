@@ -31,19 +31,10 @@ fn check_valid(vec: &Vec<u32>, skip: usize) -> bool {
             continue;
         }
 
-        if increase {
-            if *value < current_value{
-                return false;
-            }
-        } else {
-            if *value > current_value {
-                return false;
-            }
-        }
-        if value.abs_diff(current_value) > 3 {
+        if increase && (*value <= current_value || value - current_value > 3) {
             return false;
         }
-        if value.abs_diff(current_value) == 0 {
+        if !increase && (*value >= current_value || current_value - value > 3) {
             return false;
         }
         current_value = *value;
@@ -52,6 +43,7 @@ fn check_valid(vec: &Vec<u32>, skip: usize) -> bool {
 }
 
 fn check_valid_part2(vec: &Vec<u32>) -> bool {
+    // the 10000 is a hack to avoid skipping an element - was too lazy to write this properly
     if check_valid(vec, 10000) {
         return true;
     }
