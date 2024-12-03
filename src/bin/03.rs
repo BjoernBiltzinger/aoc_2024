@@ -1,34 +1,34 @@
-use regex::Regex;
+use regex::RegexBuilder;
 
 advent_of_code::solution!(3);
 
+
 pub fn part_one(input: &str) -> Option<u32> {
-    let re = Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)").unwrap();
-    Some(re.captures_iter(input).map(|cap| {
+    Some(RegexBuilder::new(r"mul\((\d{1,3}),(\d{1,3})\)").unicode(false).build().unwrap().captures_iter(input).map(|cap| {
         cap[1].parse::<u32>().unwrap() * cap[2].parse::<u32>().unwrap()
     }).sum())
 }
 
-fn is_active(pos: usize, do_pos: &Vec<usize>, dont_pos: &Vec<usize>) -> bool {
-    // check if the closest do is closer than the closest dont only consider the ones before the current position
-    match (do_pos.iter().filter(|&&x| x < pos).max(), dont_pos.iter().filter(|&&x| x < pos).max()) {
-        (Some(do_val), Some(dont_val)) => do_val > dont_val,
-        (Some(_), None) => true,
-        (None, None) => true,
-        (None, Some(_)) => false,
-    }
-}
-
 pub fn part_two(input: &str) -> Option<u32> {
-    let do_pos = Regex::new(r"do\(\)").unwrap().find_iter(input).map(|m| m.start()).collect::<Vec<_>>();
-    let dont_pos = Regex::new(r"don't\(\)").unwrap().find_iter(input).map(|m| m.start()).collect::<Vec<_>>();
-    Some(Regex::new(r"mul\((\d{1,3}),(\d{1,3})\)").unwrap().captures_iter(input).map(|cap| {
-        if is_active(cap.get(0).unwrap().start(), &do_pos, &dont_pos) {
-            cap[1].parse::<u32>().unwrap() * cap[2].parse::<u32>().unwrap()
-        } else {
-            0
-        }
-    }).sum())
+    Some(
+        RegexBuilder::new(r"mul\((\d{1,3}),(\d{1,3})\)|do\(\)|don't\(\)")
+        .unicode(false)
+        .build()
+        .unwrap()
+        .captures_iter(input)
+        .fold((0, true), |prev, cap| 
+            if cap.get(0).unwrap().as_str() == "do()" {
+                (prev.0, true)
+            } else if cap.get(0).unwrap().as_str() == "don't()" {
+                (prev.0, false)
+            } else {
+                if prev.1 {
+                    (prev.0 + cap[1].parse::<u32>().unwrap() * cap[2].parse::<u32>().unwrap(), prev.1)
+                } else {
+                    (prev.0, prev.1)
+                }
+            })
+        .0)
 }
 
 #[cfg(test)]
