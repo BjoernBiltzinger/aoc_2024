@@ -32,10 +32,6 @@ pub fn part_two(input: &str) -> Option<u32> {
     Some(re_mul.captures_iter(input).map(|cap| {
         let pos = cap.get(0).unwrap().start();
         if is_active(pos, &do_pos, &dont_pos) {
-            println!("Active: {}", &cap[0]);
-            println!("Do: {:?}", do_pos);
-            println!("Dont: {:?}", dont_pos);
-            println!("Pos: {}", pos);
             let a = cap[1].parse::<u32>().unwrap();
             let b = cap[2].parse::<u32>().unwrap();
             a * b
