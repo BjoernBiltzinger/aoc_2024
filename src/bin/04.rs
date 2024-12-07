@@ -27,30 +27,43 @@ impl Direction {
     }
 }
 
-#[derive(Clone)]
+static ALL_DIRECTIONS: [Direction; 8] = [
+    Direction::N,
+    Direction::E,
+    Direction::S,
+    Direction::W,
+    Direction::NE,
+    Direction::SE,
+    Direction::SW,
+    Direction::NW,
+];
+
+#[derive(Clone, Copy, Debug)]
 pub struct Point {
     x: usize,
-    y: usize
+    y: usize,
+    content: char,
 }
 
 
 pub struct Matrix {
-    pub cells: Vec<Vec<char>>,
+    pub cells: Vec<Vec<Point>>,
     pub cols: usize,
     pub rows: usize
 }
 
 impl Matrix {
-    fn get(&self, point: &Point) -> char {
-        self.cells[point.y][point.x]
+    fn get(&self, x: usize, y: usize) -> &Point {
+        &self.cells[y][x]
     }
 
-    fn neighbor(&self, point: &Point, direction: Direction)  -> Option<Point> {
+    fn neighbor(&self, point: &Point, direction: Direction)  -> Option<&Point> {
         match direction {
             Direction::N => {
                 let x = point.x;
                 let y= point.y.checked_sub(1)?;
-                Some(Point { x, y })
+                Some(self.get(x, y))
+                //Some(Point { x, y })
             },
             Direction::E => {
                 let x = if point.x + 1 < self.cols {
@@ -58,7 +71,8 @@ impl Matrix {
                 } else {
                     return None;
                 };
-                Some(Point { x, y: point.y })
+                Some(self.get(x, point.y))
+                //Some(Point { x, y: point.y })
             },
             Direction::S  => {
                 let y = if point.y + 1 < self.rows {
@@ -66,12 +80,12 @@ impl Matrix {
                 } else {
                     return None;
                 };
-                Some(Point { x: point.x, y })
+                Some(self.get(point.x, y))
             },
             Direction::W => {
                 let x = point.x.checked_sub(1)?;
                 let y= point.y;
-                Some(Point { x, y })
+                Some(self.get(x, y))
             },
             Direction::NE => {
                 let point_east = self.neighbor(point, Direction::E)?;
@@ -91,16 +105,59 @@ impl Matrix {
             },
         }
     }
+    fn check(&self, point: &Point, direction: Direction, chars: [char; 3], index: usize) -> bool{
+        // check that this point is the start of the word
+        if chars[index] != point.content {
+            return false;
+        }
+        if index == chars.len() - 1 {
+            return true;
+        }
+        let next_point = self.neighbor(point, direction);
+        if next_point.is_none() {
+            return false;
+        }
+        self.check(&next_point.unwrap(), direction, chars, index+1)
+    }
+    fn check_2(&self, point: &Point) -> bool{
+        let sw_point = self.neighbor(point, Direction::SW);
+        let ne_point = self.neighbor(point, Direction::NE);
+        if !sw_point.is_none() && !ne_point.is_none() {
+            let sw = sw_point.unwrap();
+            let ne = ne_point.unwrap();
+            if sw.content == 'M' && ne.content == 'S' || sw.content == 'S' && ne.content == 'M' {
+                let se_point = self.neighbor(point, Direction::SE);
+                let nw_point = self.neighbor(point, Direction::NW);
+                if !se_point.is_none() && !nw_point.is_none() {
+                    let se = se_point.unwrap();
+                    let nw = nw_point.unwrap();
+                    if se.content == 'M' && nw.content == 'S' || se.content == 'S' && nw.content == 'M' {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
 }
 
 fn parse_input(input: &str) -> Matrix {
-    let cells: Vec<Vec<char>> = input
+    let cells: Vec<Vec<Point>> = input
         .lines()
-        .filter_map(|line| {
+        .enumerate()
+        .filter_map(|(idy, line)| {
             if line.is_empty() {
                 None
             } else {
-                Some(line.chars().collect())
+                Some(
+                    line.chars()
+                        .enumerate()
+                        .map(|(idx, c)| Point { x: idx, y: idy, content: c })
+                        .collect(),
+                )
+
+
+                //Some(line.chars().collect())
             }
         })
         .collect();
@@ -117,87 +174,41 @@ fn parse_input(input: &str) -> Matrix {
 
 const CHARS: [char; 3] = ['M', 'A', 'S'];
 
-fn count_xmas(matrix: &Matrix, point: Point) -> usize {
-    let mut counter = 0;
+fn count_xmas(matrix: &Matrix, point: &Point) -> usize {
 
-    for direction in Direction::all() {
-        let mut current_point = point.clone();
-
-        for (i, char) in CHARS.iter().enumerate() {
-            match matrix.neighbor(&current_point, direction) {
-                Some(point) => {
-                    let current_char = matrix.get(&point);
-                    current_point = point;
-                    if *char != current_char {
-                        break;
-                    }
-                },
-                None => {
-                    break;
-                },
-            }
-
-            if i == CHARS.len() - 1 {
-                counter +=1;
-            }
+    ALL_DIRECTIONS.iter().fold(0, |acc, direction| {
+        let next_point = matrix.neighbor(point, *direction);
+        if !next_point.is_none() && matrix.check(&next_point.unwrap(), *direction, CHARS, 0) {
+            return acc + 1;
         }
-    }
-    counter
-}
-
-fn count_part_2(matrix: &Matrix, point: Point) -> usize {
-    let matches = [[Direction::SE, Direction::NW], [Direction::SW, Direction::NE]]
-        .iter()
-        .filter(|pair| {
-            let mut chars: Vec<char> = pair.iter().filter_map(|dir| {
-                let this_point =matrix.neighbor(&point, *dir)?;
-                Some(matrix.get(&this_point))
-            }
-            ).collect();
-    
-            chars.sort();
-    
-            chars.len() == 2 && chars[0] == 'M' && chars[1] == 'S'
-        })
-        .count() == 2;
-
-    if matches { 1 } else { 0 }
+        acc
+    })
 }
 
 pub fn part_one(input: &str) -> Option<usize> {
     let matrix = parse_input(input);
 
-    let mut sum = 0;
-
-    for y in 0..matrix.cols {
-        for x in 0..matrix.rows {
-            let value = matrix.get(&Point { x, y });
-            if value == 'X' {
-                let point = Point { x, y };
-                sum += count_xmas(&matrix, point);
+    Some(matrix.cells.iter().fold(0,|acc, row| {
+        acc + row.iter().fold(0, |acc,cell| {
+            if cell.content == 'X' {
+                return acc + count_xmas(&matrix, cell)
             }
-        }
-    }
-
-    Some(sum)
+            acc
+        })
+    }))
 }
 
 pub fn part_two(input: &str) -> Option<usize> {
     let matrix = parse_input(input);
 
-    let mut sum = 0;
-
-    for y in 0..matrix.cols {
-        for x in 0..matrix.rows {
-            let value = matrix.get(&Point { x, y });
-            if value == 'A' {
-                let point = Point { x, y };
-                sum += count_part_2(&matrix, point);
-            }
-        }
-    }
-
-    Some(sum)
+    Some(matrix.cells.iter().fold(0,|acc, row| {
+        acc + row.iter().fold(0, |acc,cell| {
+            if cell.content == 'A' && matrix.check_2(cell){
+                    return acc + 1;
+            }    
+            acc
+        })
+    }))
 }
 
 #[cfg(test)]
