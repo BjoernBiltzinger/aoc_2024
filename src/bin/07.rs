@@ -6,33 +6,10 @@ struct Equation {
     total: u64,
 }
 
-impl Equation {
-    fn is_valid(&self) -> bool {
-        let mut potential_total = vec![self.parts[0]];
-        for part in self.parts.iter().skip(1) {
-            let mut new_values = Vec::new();
-            for value in potential_total.iter() {
-                // either + or *
-                let plus_value = value + part;
-                let times_value = value * part;
-
-                if plus_value == self.total || times_value == self.total {
-                    return true;
-                }
-                if plus_value < self.total {
-                    new_values.push(plus_value);
-                }
-                if times_value < self.total {
-                    new_values.push(times_value);
-                }
-            }
-            if new_values.is_empty() {
-                return false;
-            }
-            potential_total = new_values;
-        }
-        false
-    }
+pub enum Operation {
+    Mult,
+    Add,
+    Concat,
 }
 
 fn order_of_magnitude(n: u64) -> u64 {
@@ -45,28 +22,30 @@ fn order_of_magnitude(n: u64) -> u64 {
     result
 }
 
-fn is_valid_2(parts: &Vec<u64>, total: u64, current: u64, idx: usize) -> bool {
+fn is_valid(parts: &Vec<u64>, total: u64, current: u64, idx: usize, operations: &[Operation]) -> bool {
     if idx == parts.len() {
         return current == total;
     }
     let next_part = parts[idx];
 
-    // three options - either +, *, or concat next two values
-    let plus_value = current + next_part;
-    if plus_value <= total {
-        if is_valid_2(parts, total, plus_value, idx+1){
-            return true;
+
+    for operation in operations {
+        let new_val = match operation {
+            Operation::Add => {
+                current + next_part
+            }
+            Operation::Mult => {
+                current * next_part
+            }
+            Operation::Concat => {
+                current * 10 * order_of_magnitude(next_part) + next_part
+            }
+        };
+        if new_val <= total {
+            if is_valid(parts, total, new_val, idx+1, operations) {
+                return true;
+            }
         }
-    }
-    let times_value = current * next_part;
-    if times_value <= total {
-        if is_valid_2(parts, total, times_value, idx+1) {
-            return true;
-        }
-    }
-    let concat_value = current * 10 * order_of_magnitude(next_part) + next_part;
-    if is_valid_2(parts, total, concat_value, idx+1) {
-        return true;
     }
     false
 }
@@ -90,13 +69,14 @@ pub fn part_one(input: &str) -> Option<u64> {
     Some(equations
         .iter()
         .filter_map(|eq| {
-            if eq.is_valid() {
+            if is_valid(&eq.parts, eq.total, eq.parts[0], 1, &[Operation::Add, Operation::Mult]) {
                 Some(eq.total)
             } else {
                 None
             }
         })
-        .sum())
+        .sum()
+    )
 }
 
 pub fn part_two(input: &str) -> Option<u64> {
@@ -104,7 +84,7 @@ pub fn part_two(input: &str) -> Option<u64> {
     Some(equations
         .iter()
         .filter_map(|eq| {
-            if is_valid_2(&eq.parts, eq.total, eq.parts[0], 1) {
+            if is_valid(&eq.parts, eq.total, eq.parts[0], 1, &[Operation::Add, Operation::Mult, Operation::Concat]) {
                 Some(eq.total)
             } else {
                 None
