@@ -69,10 +69,9 @@ fn check_hikes(matrix: &Matrix, x: usize, y: usize, delta: usize, mut reachable:
         // add entry to reachable if not already present and count up by one 
         reachable.entry((x,y)).and_modify(|e| *e += 1).or_insert(1);
     }
-    for (neighbour_x, neighbour_y) in matrix.get_neighbours(x, y, delta as u32){
-        reachable = check_hikes(matrix, neighbour_x, neighbour_y, delta, reachable);
-    }
-    reachable
+    matrix.get_neighbours(x, y, delta as u32).iter().fold(reachable, |acc, (neighbour_x, neighbour_y)| {
+        check_hikes(matrix, *neighbour_x, *neighbour_y, delta, acc)
+    })
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
