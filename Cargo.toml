@@ -29,3 +29,6 @@ tinyjson = "2.5.1"
 
 # Solution dependencies
 regex = "1.11.1"
+once_cell = "1.18"
+cached = "0.54.0"
+
