@@ -2,28 +2,7 @@ use cached::{proc_macro::cached, Cached};
 
 advent_of_code::solution!(11);
 
-
-
-// impl<'a> Stone<'a> {
-//     fn blink(&mut self) {
-//         if self.value == 0{
-//             self.value = 1;
-//         } else if self.value.to_string().len() % 2 == 0{
-//             let string_number = self.value.to_string();
-//             let split_idx = string_number.len() / 2;
-//             let (left, right) = string_number.split_at(split_idx);
-//             let left = left.parse::<u64>().unwrap();
-//             let right = right.parse::<u64>().unwrap();
-//             let new_stone = Stone{value: right, left_neighbour: Some(&Box::new(self)), right_neighbour: self.right_neighbour};
-//             self.value = left;
-//             self.left_neighbour = Some(&Box::new(&new_stone));
-//         } else {
-//             self.value *= 2024;
-//         }
-//     }
-// }
-
-#[cached(name = "MY_CUSTOM_CACHE")]
+#[cached(name = "BLINK_CACHE")]
 fn blink (value: u64, cycle: usize, num_cycles: usize) -> u64 {
     if cycle == num_cycles {
         return 1;
@@ -56,7 +35,7 @@ fn parse_input(input: &str) -> Vec<u64> {
 
 pub fn part_one(input: &str) -> Option<u64> {
     let stones = parse_input(input);
-    MY_CUSTOM_CACHE.lock().unwrap().cache_reset();
+    BLINK_CACHE.lock().unwrap().cache_reset();
     Some(stones.iter().fold(0, |acc, stone| {
         acc + blink(*stone, 0, 25)
     }))
@@ -64,7 +43,7 @@ pub fn part_one(input: &str) -> Option<u64> {
 
 pub fn part_two(input: &str) -> Option<u64> {
     let stones = parse_input(input);
-    MY_CUSTOM_CACHE.lock().unwrap().cache_reset();
+    BLINK_CACHE.lock().unwrap().cache_reset();
     Some(stones.iter().fold(0, |acc, stone| {
         acc + blink(*stone, 0, 75)
     }))
