@@ -186,15 +186,16 @@ fn parse_input(input: &str) -> Matrix {
     Matrix{values, n_cols, n_rows}
 }
 
-fn get_region(matrix: &Matrix, x_start: usize, y_start: usize) -> Region{
+fn get_region(matrix: &Matrix, x_start: usize, y_start: usize, mut places_assigned: HashSet<(usize,usize)>) -> (Region, HashSet<(usize,usize)>){
     // for a given point, get the region it belongs to
-    let mut places_assigned = HashSet::new();
+    let mut new_places_assigned = HashSet::new();
     let mut places_to_visit = HashSet::new();
     places_to_visit.insert((x_start, y_start));
     let value = matrix.values[y_start][x_start];
     while !places_to_visit.is_empty(){
         let (x, y) = places_to_visit.iter().next().unwrap().clone();
         places_assigned.insert((x, y));
+        new_places_assigned.insert((x, y));
         places_to_visit.remove(&(x, y));
         for direction in ALL_DIRECTIONS.iter(){
             if let Some((xnew, ynew)) = matrix.get_neighbour(x, y, *direction){
@@ -204,7 +205,7 @@ fn get_region(matrix: &Matrix, x_start: usize, y_start: usize) -> Region{
             }
         }
     }
-    Region{plots_positions: places_assigned, value}   
+    (Region{plots_positions: new_places_assigned, value}, places_assigned)
 }
 
 fn map_out_regions(matrix: &Matrix) -> Vec<Region>{
@@ -215,8 +216,8 @@ fn map_out_regions(matrix: &Matrix) -> Vec<Region>{
             if places_assigned.contains(&(x, y)){
                 continue;
             }
-            let region = get_region(&matrix, x, y);
-            places_assigned = places_assigned.union(&region.plots_positions).cloned().collect();
+            let (region, new_places_assigned) = get_region(&matrix, x, y, places_assigned);
+            places_assigned = new_places_assigned;
             regions.push(region);
         }
     }
